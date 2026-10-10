@@ -1,6 +1,8 @@
 # Personal Web Avatar
 
-A personal chat avatar that introduces my background, answers recruiter questions from my CV, shares technical perspectives I have written down, and — for me only — recalls private master notes. No visitor signup; spend is capped with owner-minted URL keys.
+A personal chat avatar that introduces my background, answers recruiter questions from a frozen CV corpus, can search the web, and emails me when someone wants to meet. Replies are spoken aloud with a cloned voice.
+
+**Live:** [avatar.lexoralabshk.com](https://avatar.lexoralabshk.com)
 
 **Source code is private.** This public repo is the project overview only.
 
@@ -12,56 +14,58 @@ A personal chat avatar that introduces my background, answers recruiter question
 
 ## What it does
 
-- Introduces me with a static photo (v1 — no talking head)
-- Answers recruiter questions from a structured CV (no invented dates/titles/skills)
-- Shares public technical perspectives I endorse
-- Recalls private Notion / master notes when opened with a private key
-- Caps token spend without accounts
+- Google Sign-In for visitors (no username/password)
+- Conversational answers from a structured CV + public technical perspectives (no invented facts)
+- LangGraph agent with tools:
+  - **web_search** — time-sensitive / external facts via Z.AI
+  - **request_meeting** — emails the owner (Resend) when a visitor wants to meet
+- Voice replies (`glm-tts`) with a cloned voice
+- Animated portrait (blink, gaze, think, mouth cycle) while speaking
+- Daily visitor message limit (10 / Hong Kong day); owners unlimited
+- Per-user token budgets in SQLite
 
 ## Architecture
 
 ```text
-Recruiter / me
+Visitor (browser)
       │
       ▼
-Vite + React 19 UI  ──/api──►  Express (Node)
-  react-router-dom              GLM-4.7 stream
-  /  /c/:key  /admin            SQLite budgets + history
-                                Frozen system prefixes
+React 19 + Vite SPA  ──/api──►  Express (Node / Railway)
+  Google OAuth redirect           LangGraph: llm ↔ tools
+  Streaming chat + TTS playback   Z.AI GLM-4.7 + glm-tts
+  AlivePortrait animation         SQLite users / history / budgets
+                                  Frozen system prefixes (CV + notes)
 ```
 
-- **Frontend:** React 19, Vite, `react-router-dom`
-- **Backend:** Express, TypeScript, GLM-4.7 (Z.AI), SQLite (`node:sqlite`)
-- **Hosting target:** Railway (API + volume for SQLite; frontend as static site)
+- **Frontend:** React 19, Vite, `react-router-dom`, Web Audio TTS playback
+- **Backend:** Express, TypeScript, LangGraph, Z.AI GLM + TTS, Resend, SQLite (`node:sqlite`)
+- **Hosting:** Railway (API + volume for SQLite) serves API and SPA same-origin; Cloudflare custom domain
 
-### Knowledge layers (not one prompt)
+### Knowledge layers
 
 | Layer | Contents | Who |
 | --- | --- | --- |
-| Public facts | Structured CV / bio | Recruiter + me |
-| Public views | Endorsed technical perspectives | Recruiter + me |
-| Private notes | Notion master document | Me only |
+| Public facts | Structured CV / bio | All signed-in visitors |
+| Public views | Endorsed technical perspectives | All signed-in visitors |
+| Private notes | Master notes | Owner emails only |
 
-Two frozen system-prompt prefixes keep GLM automatic prompt caching effective and prevent private notes leaking through a forwarded recruiter link.
+System-prompt prefixes are hashed and frozen so automatic prompt caching stays effective and private notes never leak through a visitor session.
 
-### Access without registration
+### Access model
 
-I mint capability URLs (`/c/:key`):
-
-- **public / demo** — CV + perspectives, small budget
-- **private** — above + master notes
-
-Each key has a budget, optional expiry, and revoke. Keys are never stuffed into the system prompt (that would break cache hits).
+- Visitors sign in with Google; chat history and budget are per Google user
+- Emails in `OWNER_EMAILS` get the private corpus and skip the daily message cap
+- Capability URL keys (`/c/:key`) are legacy; primary path is Google users
 
 ## Why this shape
 
 - Stuffing a bounded personal corpus into the system prompt beats RAG for CV accuracy
-- Unique URLs beat signup for recruiters
-- A thin `runTurn` adapter leaves room for LangGraph later (search, scheduling) without shipping an agent framework on day one
+- Google Sign-In beats anonymous keys for abuse control and continuity across visits
+- A thin LangGraph (`llm` ↔ `tools`) adds web search and meeting notify without a heavy agent framework
 
 ## Status
 
-v1 scaffolding is in the private repos: chat UI, key mint/admin, corpus snapshots, streaming chat, Railway volume notes. Fill CV / perspectives / Notion, set `GLM_API_KEY`, then share recruiter links.
+Production at [avatar.lexoralabshk.com](https://avatar.lexoralabshk.com): Google auth, LangGraph tools, cloned-voice TTS, daily limits, same-origin SPA on Railway.
 
 ## License
 
