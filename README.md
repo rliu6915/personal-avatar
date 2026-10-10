@@ -4,68 +4,48 @@ A personal chat avatar that introduces my background, answers recruiter question
 
 **Live:** [avatar.lexoralabshk.com](https://avatar.lexoralabshk.com)
 
-**Source code is private.** This public repo is the project overview only.
+Source code is private. This public repo is the project overview only.
 
 | Role | Repo | Visibility |
 | --- | --- | --- |
-| Overview (this) | [`personal-avatar`](https://github.com/rliu6915/personal-avatar) | Public |
+| Overview | [`personal-avatar`](https://github.com/rliu6915/personal-avatar) | Public |
 | UI | [`personal-avatar-frontend`](https://github.com/rliu6915/personal-avatar-frontend) | Private |
 | API | [`personal-avatar-backend`](https://github.com/rliu6915/personal-avatar-backend) | Private |
 
-## What it does
+## Features
 
-- Google Sign-In for visitors (no username/password)
-- Conversational answers from a structured CV + public technical perspectives (no invented facts)
-- LangGraph agent with tools:
-  - **web_search** — time-sensitive / external facts via Z.AI
-  - **request_meeting** — emails the owner (Resend) when a visitor wants to meet
+- Google Sign-In for visitors
+- Conversational answers from a structured CV and public technical perspectives (no invented facts)
+- LangGraph agent with tools
+  - **web_search** — external / time-sensitive facts via Z.AI
+  - **request_meeting** — emails the owner when a visitor wants to meet
 - Voice replies (`glm-tts`) with a cloned voice
-- Animated portrait (blink, gaze, think, mouth cycle) while speaking
-- Daily visitor message limit (10 / Hong Kong day); owners unlimited
-- Per-user token budgets in SQLite
+- Animated portrait while speaking (blink, gaze, think, mouth)
+- Daily visitor message limit; per-user token budgets
 
 ## Architecture
 
 ```text
-Visitor (browser)
-      │
-      ▼
-React 19 + Vite SPA  ──/api──►  Express (Node / Railway)
-  Google OAuth redirect           LangGraph: llm ↔ tools
-  Streaming chat + TTS playback   Z.AI GLM-4.7 + glm-tts
-  AlivePortrait animation         SQLite users / history / budgets
-                                  Frozen system prefixes (CV + notes)
+Visitor
+  │
+  ▼
+React 19 + Vite SPA  ──/api──►  Express on Railway
+  Google OAuth                  LangGraph: llm ↔ tools
+  Streaming chat + TTS          Z.AI GLM-4.7 + glm-tts
+  AlivePortrait                 SQLite + frozen CV prefixes
 ```
 
-- **Frontend:** React 19, Vite, `react-router-dom`, Web Audio TTS playback
-- **Backend:** Express, TypeScript, LangGraph, Z.AI GLM + TTS, Resend, SQLite (`node:sqlite`)
-- **Hosting:** Railway (API + volume for SQLite) serves API and SPA same-origin; Cloudflare custom domain
+| Layer | Stack |
+| --- | --- |
+| Frontend | React 19, Vite, react-router-dom, Web Audio |
+| Backend | Express, TypeScript, LangGraph, Z.AI, Resend, SQLite |
+| Hosting | Railway (API + SPA same-origin), Cloudflare custom domain |
 
-### Knowledge layers
-
-| Layer | Contents | Who |
-| --- | --- | --- |
-| Public facts | Structured CV / bio | All signed-in visitors |
-| Public views | Endorsed technical perspectives | All signed-in visitors |
-| Private notes | Master notes | Owner emails only |
-
-System-prompt prefixes are hashed and frozen so automatic prompt caching stays effective and private notes never leak through a visitor session.
-
-### Access model
-
-- Visitors sign in with Google; chat history and budget are per Google user
-- Emails in `OWNER_EMAILS` get the private corpus and skip the daily message cap
-- Capability URL keys (`/c/:key`) are legacy; primary path is Google users
-
-## Why this shape
-
-- Stuffing a bounded personal corpus into the system prompt beats RAG for CV accuracy
-- Google Sign-In beats anonymous keys for abuse control and continuity across visits
-- A thin LangGraph (`llm` ↔ `tools`) adds web search and meeting notify without a heavy agent framework
+Knowledge comes from a structured CV and endorsed public perspectives, injected as frozen system-prompt prefixes.
 
 ## Status
 
-Production at [avatar.lexoralabshk.com](https://avatar.lexoralabshk.com): Google auth, LangGraph tools, cloned-voice TTS, daily limits, same-origin SPA on Railway.
+Production at [avatar.lexoralabshk.com](https://avatar.lexoralabshk.com).
 
 ## License
 
